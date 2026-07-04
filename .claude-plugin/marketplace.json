@@ -1,0 +1,26 @@
+{
+  "name": "yd-skillset",
+  "owner": {
+    "name": "Yurii Denysenko",
+    "email": "yuridevx@gmail.com",
+    "url": "https://github.com/yuridevx"
+  },
+  "metadata": {
+    "description": "Personal agent-skill set for AI coding chats. Installs into both Claude Code and Codex CLI from one repo; add skills under skills/<name>/SKILL.md and run scripts/generate.py.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "yd-skillset",
+      "source": "./",
+      "description": "Personal agent-skill set for AI coding chats. Installs into both Claude Code and Codex CLI from one repo; add skills under skills/<name>/SKILL.md and run scripts/generate.py.",
+      "category": "agents",
+      "keywords": [
+        "skills",
+        "claude-code",
+        "codex",
+        "agent-skills"
+      ]
+    }
+  ]
+}

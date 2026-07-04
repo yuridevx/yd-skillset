@@ -1,0 +1,4 @@
+#!/bin/sh
+# Block the commit if any generated manifest or doc catalog is stale.
+# Regenerate with: python scripts/generate.py
+exec python scripts/generate.py --check
