@@ -1,6 +1,6 @@
 ---
 name: algo-rewrite
-description: Whole-codebase algorithmic rewrite pipeline for any language — inventory every algorithm, data flow, and feature with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, two-axis speed-vs-simplicity adoption), assemble winners into a fresh-file sibling v2 with class-map tests, a blind adversarial edge audit, and oracle-seeded fuzzing, audit feature parity with a gap-hunter agent that can force full re-iteration, and finish with the harden skill. Testing method (red-first TDD, class map + BVA, fuzzing standard, edge-hunter protocol) loads from the test-practice skill; language specifics (benchmark harness, allocation tracking, hidden allocators, SIMD/concurrency facilities, library shortlist, fuzzing engines) load from a <lang>-toolkit skill (e.g. msvcpp-toolkit) or are derived at setup when none exists. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate, fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "algo-rewrite", "/algo-rewrite", "algorithmic rewrite", "rewrite the algorithms", "optimize algorithms into v2", "make this algorithmically optimal", "rewrite for performance".
+description: Whole-codebase algorithmic rewrite pipeline for any language — inventory every algorithm, data flow, and feature with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, two-axis speed-vs-simplicity adoption), assemble winners into a fresh-file sibling v2 with class-map tests, a blind adversarial edge audit, and deterministic boundary enforcement at every trust boundary, audit feature parity with a gap-hunter agent that can force full re-iteration, and finish with the harden skill. Testing method (red-first TDD, class map + BVA, boundary enforcement standard, edge-hunter protocol) loads from the test-practice skill; language specifics (benchmark harness, allocation tracking, hidden allocators, SIMD/concurrency facilities, library shortlist, boundary-enforcement mechanisms) load from a <lang>-toolkit skill (e.g. msvcpp-toolkit) or are derived at setup when none exists. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate, fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "algo-rewrite", "/algo-rewrite", "algorithmic rewrite", "rewrite the algorithms", "optimize algorithms into v2", "make this algorithmically optimal", "rewrite for performance".
 ---
 
 # algo-rewrite
@@ -37,13 +37,13 @@ SETUP → SCAN → TRIAGE → ASK ══ only user stop (skipped if "autonomous"
 
 ## The language toolkit
 
-Every language-specific choice in this skill is delegated to a **toolkit**: at SETUP, detect the target language and invoke the matching `<lang>-toolkit` skill (e.g. `msvcpp-toolkit`). It supplies, in named sections: **Toolchain** (what to detect), **Benchmarking** (harness install order, instrumentation pattern, allocation tracking), **Hot-path rules** (hidden allocation sources, error model), **SIMD / data-parallel** and **Concurrency** facilities, the **Library shortlist** for the library-first lens, **Fuzzing** (harness, defaults), and **Hardening oracles** (consumed by the harden skill at HARDEN).
+Every language-specific choice in this skill is delegated to a **toolkit**: at SETUP, detect the target language and invoke the matching `<lang>-toolkit` skill (e.g. `msvcpp-toolkit`). It supplies, in named sections: **Toolchain** (what to detect), **Benchmarking** (harness install order, instrumentation pattern, allocation tracking), **Hot-path rules** (hidden allocation sources, error model), **SIMD / data-parallel** and **Concurrency** facilities, the **Library shortlist** for the library-first lens, **Boundary enforcement** (mechanisms, defaults), and **Hardening oracles** (consumed by the harden skill at HARDEN).
 
 No toolkit skill for this language → derive the same sections yourself at SETUP (web research encouraged) and record them in the ledger; the pipeline is identical either way.
 
 ## The testing rulebook
 
-All test work follows the **test-practice** skill, invoked at SETUP. Its three named sections govern: **TDD** (red-first protocol, red-evidence capture, class map + boundary-value analysis, main-flow-first 1:1 test set, fix protocol), **Fuzzing** (seeded oracle-fuzzing standard with progress gate and kept corpus), **Adversarial** (blind edge-hunter agent protocol). This skill's gates say *when* those sections run and what the ledger records; test-practice says *how*; the toolkit says *with what*.
+All test work follows the **test-practice** skill, invoked at SETUP. Its three named sections govern: **TDD** (red-first protocol, red-evidence capture, class map + boundary-value analysis, main-flow-first 1:1 test set, fix protocol), **Boundary enforcement** (every BVA-derived boundary gets a red test paired with a runtime enforcement mechanism, proven to fire), **Adversarial** (blind edge-hunter agent protocol). This skill's gates say *when* those sections run and what the ledger records; test-practice says *how*; the toolkit says *with what*.
 
 ## Universal rules (govern every gate)
 
@@ -53,8 +53,8 @@ All test work follows the **test-practice** skill, invoked at SETUP. Its three n
 
 - Harness self-check before the harness measures anything (SETUP).
 - Per prototype: tests → baseline confirmed → implement to green → benchmark (SHOOTOUT). Tests written after code invalidate the prototype.
-- Per v2 component: class map → 1:1 tests failing red against empty v2 → port to green → edge audit → fuzz (ASSEMBLE).
-- Per fix (triage failure, fuzz finding, edge-audit gap, regression, parity gap): failing repro/intent test → minimal fix to green → test kept as regression guard.
+- Per v2 component: class map → 1:1 tests failing red against empty v2 → port to green → edge audit → boundary enforcement (ASSEMBLE).
+- Per fix (triage failure, boundary-enforcement finding, edge-audit gap, regression, parity gap): failing repro/intent test → minimal fix to green → test kept as regression guard.
 - Benchmark-first is the performance twin: no optimization is implemented before the number it must beat is in the ledger.
 
 The report includes each component's red→green trail.
@@ -92,7 +92,7 @@ Ledger state machines:
 - Component: `INVENTORIED → TRIAGED → BASELINED → REWRITTEN | KEPT-AS-IS`
 - Idea: `IDEA → REFUTED | PROTOTYPED → TRIAGE-FAILED(→ REFIXED | LOST) | LOST | WON → INTEGRATED | REGRESSED-REVERTED`
 - Feature: `FEATURE → COVERED | SMALL-DIFF | DROPPED-BY-DESIGN | CONFIRMED-GAP → RE-ENTERED(iter N) → COVERED`
-- Per component: `Path: hot|cold`, `Classes:` (equivalence map incl. BVA classes), `Edge-audit:` (claims → accepted/rejected), `Fuzz:` (harness, invariants asserted, corpus size, coverage progress, runtime, findings), `Trail:` (red→green log with captured red output)
+- Per component: `Path: hot|cold`, `Classes:` (equivalence map incl. BVA classes), `Edge-audit:` (claims → accepted/rejected), `Boundary:` (boundaries enumerated, enforcement mechanism per boundary, red→green proof, findings), `Trail:` (red→green log with captured red output)
 - Header: `Assumptions:` (every self-made call), target, language + toolkit (or derived sections), toolchain, machine profile, iteration counter
 
 The ledger is memory across context compaction; never delete entries.
@@ -185,21 +185,21 @@ Hot-path hard gates on top: 0 steady-state allocations; max-latency regression =
 
 ### ASSEMBLE
 
-Build `<target>-v2/` from `WON` entries only; everything else is the **simplest faithful port** — fresh files per the no-copy rule, into a deliberately designed tree. Per component, in order (steps 1–2 and 4–5 per test-practice's TDD / Adversarial / Fuzzing sections):
+Build `<target>-v2/` from `WON` entries only; everything else is the **simplest faithful port** — fresh files per the no-copy rule, into a deliberately designed tree. Per component, in order (steps 1–2 and 4–5 per test-practice's TDD / Adversarial / Boundary enforcement sections):
 
 1. **Class map:** equivalence classes from the public API contract plus BVA classes at every boundary (test-practice TDD). Contract-impossible inputs are **out of scope**: no breaking things under unrealistic expectations.
 2. **Minimal test set:** main-flow tests first, then exactly one test per class — the smallest set where every class appears once; redundant tests are refused like redundant candidates. Written **red against the empty v2**, red output captured; ledger records `Classes: N → Tests: N (1:1)`.
 3. **Port/integrate to green.**
 4. **Edge audit:** one blind edge-hunter agent per component (test-practice Adversarial) — contract + class map + code only. Accepted claims become new classes with red tests, fixed per the fix protocol; rejections get a one-line reason. Ledger records the `Edge-audit:` receipt.
-5. **Fuzz:** oracle-seeded harness per trust boundary (test-practice Fuzzing) — class-map inputs as seed corpus, dictionary for grammar inputs, component invariants asserted, sanitizers on; engine per the toolkit's Fuzzing section. Clean only past the progress gate; corpus kept in `bench/`; findings block that part until fixed red-first.
+5. **Boundary enforcement:** per trust boundary (test-practice Boundary enforcement) — every BVA class from the class map gets a runtime enforcement mechanism (assertion, contract, bounds-checked type, sanitizer-backed build) per the toolkit's Boundary enforcement section, each proven by a red test before it's added. Findings block that part until fixed red-first.
 
-**Exit:** v2 complete, class-map tests 1:1 green, edge audit triaged, fuzz clean past the progress gate.
+**Exit:** v2 complete, class-map tests 1:1 green, edge audit triaged, every boundary enforced and proven red→green.
 
 ### PROVE
 
 Re-measure every integrated part **in situ** via the gated instrumentation inside real v2 flows, plus end-to-end vs the v1 macro baselines. Microbenches judged the shootout; in-situ numbers judge integration. Won-isolated-but-regressed-integrated → `REGRESSED-REVERTED`, replaced by the simple port.
 
-**Exit:** every adopted win confirmed in place; regressions reverted; tests green + fuzz clean.
+**Exit:** every adopted win confirmed in place; regressions reverted; tests green + every boundary enforcement proven.
 
 ### PARITY (1 gap-hunter agent per pass — can force a new loop iteration)
 
@@ -212,13 +212,13 @@ The **spirit rule** for judging: changed signatures/error models, different inte
 
 Main thread adjudicates each claim: **refute with a trace** of how v2 serves the intent / **DROPPED-BY-DESIGN** (matches a declared drop) / **CONFIRMED-GAP**. An undeclared drop is always a confirmed gap — even if dropping was right, the decision must become explicit, never accidental.
 
-**Confirmed gaps get the full pipeline, not band-aids:** each is registered in the ledger and the rewrite loop **re-enters at IDEATE** for that feature set — ideate how the capability fits v2's design natively, refute, baseline against v1's implementation, shoot out alternatives, assemble red-first with class map + fuzz, prove in situ. The result is indistinguishable from first-iteration work: same rules, same gates, same evidence.
+**Confirmed gaps get the full pipeline, not band-aids:** each is registered in the ledger and the rewrite loop **re-enters at IDEATE** for that feature set — ideate how the capability fits v2's design natively, refute, baseline against v1's implementation, shoot out alternatives, assemble red-first with class map + boundary enforcement, prove in situ. The result is indistinguishable from first-iteration work: same rules, same gates, same evidence.
 
 **Exit:** a full gap-hunter pass (fresh agent) returns **zero new design-defining claims**. Cost per pass: exactly 1 agent call.
 
 ### HARDEN
 
-Invoke the **harden** skill on `<target>-v2/` with the same language toolkit. It runs its own full convergence loop with its own ledger; the fuzz harnesses from ASSEMBLE are handed over as extra oracles.
+Invoke the **harden** skill on `<target>-v2/` with the same language toolkit. It runs its own full convergence loop with its own ledger; the boundary enforcement mechanisms from ASSEMBLE are handed over as extra oracles.
 
 **Exit:** harden converged.
 
@@ -230,7 +230,7 @@ From the ledger, cumulative:
 - **Library adoptions** — what replaced hand-rolled code and why it won or tied.
 - **Refuted / lost / reverted** — one line each: the noise receipt ("31 ideas, 6 adopted, here's why the rest died").
 - **Parity matrix** — `N features → covered / dropped-by-design (rationale) / migrated-after-audit`, plus refuted claims — the receipt that the audit had teeth.
-- **Coverage** — per component `Classes: N → Tests: N`, edge-audit receipt, fuzz runtime + corpus size + findings.
+- **Coverage** — per component `Classes: N → Tests: N`, edge-audit receipt, boundary-enforcement coverage + findings.
 - **Machine profile** and exact commands to re-run `bench/`.
 
 Never dress up an interrupted run as complete; report the actual last ledger state — the ledger lets a later session resume exactly where it stopped.

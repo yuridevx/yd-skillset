@@ -1,6 +1,6 @@
 ---
 name: msvcpp-toolkit
-description: C++ language toolkit, MSVC/Windows-first — the language-specific half of the algo-rewrite and harden skills. Supplies, in named sections, toolchain detection (cl vs clang-cl, /arch, vcpkg triplets), benchmark harness order (Google Benchmark first) with Windows measurement hygiene and alloc-guard instrumentation, hot-path hidden-allocator list and error model, SIMD (highway-first, clang-cl for hot TUs) and concurrency (oneTBB/Taskflow, PPL is frozen legacy) facilities, the library-first shortlist with maintenance-health flags, fuzzing on Windows (clang-cl libFuzzer first, Jackalope/LibAFL for binary-only), and the per-defect-class hardening oracle table (MSVC ASan; UBSan via clang-cl; TSan/MSan/LSan need a WSL leg). PASSIVE reference — invoked by algo-rewrite and harden when the target language is C++; also usable directly when choosing C++ performance or hardening tooling on Windows. Trigger on "msvcpp-toolkit", "/msvcpp-toolkit", "msvc toolkit", or as the C++ toolkit for algo-rewrite/harden.
+description: C++ language toolkit, MSVC/Windows-first — the language-specific half of the algo-rewrite and harden skills. Supplies, in named sections, toolchain detection (cl vs clang-cl, /arch, vcpkg triplets), benchmark harness order (Google Benchmark first) with Windows measurement hygiene and alloc-guard instrumentation, hot-path hidden-allocator list and error model, SIMD (highway-first, clang-cl for hot TUs) and concurrency (oneTBB/Taskflow, PPL is frozen legacy) facilities, the library-first shortlist with maintenance-health flags, boundary enforcement on Windows (bounds-checked STL hardening, checked views, asserted preconditions, ASan-backed test builds — no fuzzing engines), and the per-defect-class hardening oracle table (MSVC ASan; UBSan via clang-cl; TSan/MSan/LSan need a WSL leg). PASSIVE reference — invoked by algo-rewrite and harden when the target language is C++; also usable directly when choosing C++ performance or hardening tooling on Windows. Trigger on "msvcpp-toolkit", "/msvcpp-toolkit", "msvc toolkit", or as the C++ toolkit for algo-rewrite/harden.
 ---
 
 # msvcpp-toolkit
@@ -11,9 +11,9 @@ Recommendations are ordered: take the first that installs on the project's toolc
 
 ## Toolchain
 
-Detect and record in the ledger header: MSVC version (VS 2022 17.x / VS 2026 18.x — several libraries now gate on this; VS 2026 toolsets are serviced only **9 months each**, 14.51 is the default from 18.6, and side-by-side toolsets 14.30–14.43 are installable — bleeding-edge libraries care which rev you're on), whether **clang-cl** is installed (it is the escape hatch for UBSan, libFuzzer DLL targets, and SIMD-heavy hot TUs — MSVC-ABI-compatible, per-TU mixing is routine, one linker per binary, never mix LTO across compilers), C++ standard, `/arch` level actually enabled (MSVC defines no `__SSE__`/`__AVX__`/`__FMA__` macros; without `/arch:AVX2` expect non-VEX/VEX mixing penalties; `/arch:AVX10.2` is new in VS 2026 — 256-bit default vector length, `/vlen=512` to widen; clang-cl gets AVX10 parity in LLVM 22), build system, CPU (cores, **P/E hybrid?**, caches), package manager.
+Detect and record in the ledger header: MSVC version (VS 2022 17.x / VS 2026 18.x — several libraries now gate on this; VS 2026 toolsets are serviced only **9 months each**, 14.51 is the default from 18.6, and side-by-side toolsets 14.30–14.43 are installable — bleeding-edge libraries care which rev you're on), whether **clang-cl** is installed (it is the escape hatch for UBSan and SIMD-heavy hot TUs — MSVC-ABI-compatible, per-TU mixing is routine, one linker per binary, never mix LTO across compilers), C++ standard, `/arch` level actually enabled (MSVC defines no `__SSE__`/`__AVX__`/`__FMA__` macros; without `/arch:AVX2` expect non-VEX/VEX mixing penalties; `/arch:AVX10.2` is new in VS 2026 — 256-bit default vector length, `/vlen=512` to widen; clang-cl gets AVX10 parity in LLVM 22), build system, CPU (cores, **P/E hybrid?**, caches), package manager.
 
-Package manager: **vcpkg** (manifest mode + `builtin-baseline`; binary caching via NuGet/GitHub Packages — the old `x-gha` provider is removed; `x-azcopy` is the experimental Azure Blob provider) → Conan 2 (healthy, ~monthly releases) → CPM/FetchContent. Triplet rules: `/MD`-family (`x64-windows`, `x64-windows-static-md`) for normal and **ASan** builds — never debug-CRT+ASan via vcpkg; a **separate static release-CRT build for clang-cl fuzzing** (its libFuzzer rejects the debug CRT; `/MT` is the proven path).
+Package manager: **vcpkg** (manifest mode + `builtin-baseline`; binary caching via NuGet/GitHub Packages — the old `x-gha` provider is removed; `x-azcopy` is the experimental Azure Blob provider) → Conan 2 (healthy, ~monthly releases) → CPM/FetchContent. Triplet rules: `/MD`-family (`x64-windows`, `x64-windows-static-md`) for normal and **ASan** builds — never debug-CRT+ASan via vcpkg.
 
 `compile_commands.json` on Windows requires the **Ninja** generator — VS generators don't export it, still true in CMake 4.x (matters for clang-tidy).
 
@@ -63,15 +63,16 @@ Avoid: EVE (still no MSVC support, no Windows CI), `std::simd` (C++26 — **not 
 
 abseil: only if already in-tree (boost/ankerl beat it now). folly: cherry-pick ideas, never adopt as a dependency (vcpkg port unstable on Windows).
 
-## Fuzzing
+## Boundary enforcement
 
-Order for MSVC-built code:
+Enforce first, detect second — order for MSVC-built code:
 
-1. **clang-cl `-fsanitize=address,fuzzer`** — the capable path: supports `fuzzer-no-link` (so DLL targets work). Hard constraints: **requires ASan, a release CRT (`/MTd`/`/MDd` unsupported; `/MT` is the proven path), no `/INCREMENTAL`/`/DEBUG`**.
-2. **MSVC `/fsanitize=fuzzer`** (pass `/fsanitize=address` separately — comma syntax rejected) — EXE/static-lib targets only; no `fuzzer-no-link` *flag*, but linking `clang_rt.fuzzer_no_main_*` with `/NODEFAULTLIB` gives the own-`main` equivalent; accepts all CRT flavors; x64-centric, experimental-but-shipping.
-3. Binary-only targets: **Jackalope** (active, Project Zero) → **LibAFL via Frida** (the AFL++ org's Windows-native engine — maintained, harness-as-DLL) → WinAFL (older, needs DynamoRIO). Kernel/hard-to-harness: wtf (snapshot fuzzer; bus-factor-1 but active).
+1. **Bounds-checked types at the boundary itself:** `std::span`/`gsl::span` with `.at()` (never raw `[]`/pointer arithmetic) for any buffer crossing a trust boundary. **`_MSVC_STL_HARDENING=1`** (17.14+, release-safe, fastfail; Microsoft plans default-on post-17.x) turns `vector`/`span`/`string_view`/`optional` OOB access into a guaranteed crash — cheap enough to ship, not just to test with. Pair with **`_MSVC_STL_DESTRUCTOR_TOMBSTONES=1`** to make UAF deterministic too.
+2. **Assert the boundary's own invariant, not the symptom:** `_ASSERTE`/`assert` on every documented size/index/capacity precondition, compiled into hardened and test builds. Per test-practice's Boundary enforcement section, a red test must prove the assertion fires before it's trusted — an assert added without that proof is unverified.
+3. **Sanitizer-backed builds for CI/test:** MSVC ASan (`/fsanitize=address`) catches what the checked types above miss (raw pointer arithmetic, buffer copies via legacy APIs) — full detail in Hardening oracles below.
+4. **Shipping-build floor underneath all three:** `/sdl /GS /guard:cf` (Hardening oracles) — necessary, not sufficient; enforcement belongs at the boundary, not only the binary.
 
-Structure-aware inputs: **FuzzedDataProvider** (single header) — still standard. libFuzzer is maintenance-only upstream; **Google FuzzTest is still Linux/Bazel-only — not an option on MSVC**. AFL++ itself has no native Windows support — LibAFL is that ecosystem's Windows answer.
+Validate every length/count/size field crossing a trust boundary (parser input, network data, file formats) against the buffer's actual capacity before use — the BVA class map (test-practice TDD) names exactly which fields need this.
 
 ## Hardening oracles
 
