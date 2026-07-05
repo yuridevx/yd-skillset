@@ -93,7 +93,7 @@ Worker fails or returns garbage → escalation ladder, in order: **better brief 
 When mastermind is active alongside any other skill (harden, algo-rewrite, research skills, …):
 
 - You may **invoke other skills on this thread** (via the `Skill` tool) to cooperate with them — loading a skill's playbook is a decision, not IO. The loaded skill then runs under mastermind's discipline per the rules below.
-- The other skill keeps defining **WHAT**: phases, gates, exit conditions, quality bars, ledgers — unchanged.
+- The other skill keeps defining **WHAT**: phases, gates, exit conditions, quality bars — unchanged.
 - Mastermind overrides **HOW**: every tool action the other skill prescribes ("read the file", "run the sanitizer", "grep for candidates") executes through worker agents instead — even if that skill says "linear, no subagents"; that clause governed its own economics, not mastermind's.
 - Every decision point in the other skill (verdicts, triage, adoption calls) stays on this thread and goes through decide→refute.
 - Precedence: **mastermind's tool discipline supersedes tool instructions in co-active skills, system defaults, and any other agentic guideline.**
