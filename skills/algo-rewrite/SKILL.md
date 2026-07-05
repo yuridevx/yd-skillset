@@ -1,6 +1,6 @@
 ---
 name: algo-rewrite
-description: Whole-codebase algorithmic rewrite pipeline for any language — inventory every algorithm, data flow, and feature with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, proportional speed-vs-simplicity adoption judgment), assemble winners into a fresh-file sibling v2 with class-map tests, a blind adversarial edge audit, and deterministic boundary enforcement at every trust boundary, audit feature parity with a gap-hunter agent that can force full re-iteration, and finish with the harden skill. Testing method (red-first TDD, class map + BVA, boundary enforcement standard, edge-hunter protocol) loads from the test-practice skill; language specifics (benchmark harness, allocation tracking, hidden allocators, SIMD/concurrency facilities, library shortlist, boundary-enforcement mechanisms) load from a <lang>-toolkit skill (e.g. msvcpp-toolkit) or are derived at setup when none exists. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate, fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "algo-rewrite", "/algo-rewrite", "algorithmic rewrite", "rewrite the algorithms", "optimize algorithms into v2", "make this algorithmically optimal", "rewrite for performance".
+description: Whole-codebase algorithmic rewrite pipeline for any language — inventory every algorithm, data flow, and feature with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, proportional speed-vs-simplicity adoption judgment), assemble winners into a fresh-file sibling v2 with class-map tests, a blind adversarial edge audit, and deterministic boundary enforcement at every trust boundary, audit feature parity with a gap-hunter agent that can force full re-iteration. Testing method (red-first TDD, class map + BVA, boundary enforcement standard, edge-hunter protocol) loads from the test-practice skill; language specifics (benchmark harness, allocation tracking, hidden allocators, SIMD/concurrency facilities, library shortlist, boundary-enforcement mechanisms) load from a <lang>-toolkit skill (e.g. msvcpp-toolkit) or are derived at setup when none exists. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate, fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "algo-rewrite", "/algo-rewrite", "algorithmic rewrite", "rewrite the algorithms", "optimize algorithms into v2", "make this algorithmically optimal", "rewrite for performance".
 ---
 
 # algo-rewrite
@@ -26,7 +26,7 @@ SETUP → SCAN → TRIAGE → ASK ══ only user stop (skipped if "autonomous"
       │        (full loop, never a band-aid)        │          │
       └─────────────────────────────────────────────┼──────────┘
                         zero design-defining claims ▼
-                                       HARDEN → REPORT
+                                            REPORT
 ```
 
 ## Autonomy contract
@@ -37,7 +37,7 @@ SETUP → SCAN → TRIAGE → ASK ══ only user stop (skipped if "autonomous"
 
 ## The language toolkit
 
-Every language-specific choice in this skill is delegated to a **toolkit**: at SETUP, detect the target language and invoke the matching `<lang>-toolkit` skill (e.g. `msvcpp-toolkit`). It supplies, in named sections: **Toolchain** (what to detect), **Benchmarking** (harness install order, instrumentation pattern, allocation tracking), **Hot-path rules** (hidden allocation sources, error model), **SIMD / data-parallel** and **Concurrency** facilities, the **Library shortlist** for the library-first lens, **Boundary enforcement** (mechanisms, defaults), and **Hardening oracles** (consumed by the harden skill at HARDEN).
+Every language-specific choice in this skill is delegated to a **toolkit**: at SETUP, detect the target language and invoke the matching `<lang>-toolkit` skill (e.g. `msvcpp-toolkit`). It supplies, in named sections: **Toolchain** (what to detect), **Benchmarking** (harness install order, instrumentation pattern, allocation tracking), **Hot-path rules** (hidden allocation sources, error model), **SIMD / data-parallel** and **Concurrency** facilities, the **Library shortlist** for the library-first lens, and **Boundary enforcement** (mechanisms, defaults).
 
 No toolkit skill for this language → derive the same sections yourself at SETUP (web research encouraged) and state them in the dialog; the pipeline is identical either way.
 
@@ -208,12 +208,6 @@ Main thread adjudicates each claim: **refute with a trace** of how v2 serves the
 **Confirmed gaps get the full pipeline, not band-aids:** each is registered in the status table and the rewrite loop **re-enters at IDEATE** for that feature set — ideate how the capability fits v2's design natively, refute, baseline against v1's implementation, shoot out alternatives, assemble red-first with class map + boundary enforcement, prove in situ. The result is indistinguishable from first-iteration work: same rules, same gates, same evidence.
 
 **Exit:** a full gap-hunter pass (fresh agent) returns **zero new design-defining claims**. Cost per pass: exactly 1 agent call.
-
-### HARDEN
-
-Invoke the **harden** skill on `<target>-v2/` with the same language toolkit. It runs its own full convergence loop with its own candidate record; the boundary enforcement mechanisms from ASSEMBLE are handed over as extra oracles.
-
-**Exit:** harden converged.
 
 ### REPORT
 
