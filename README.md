@@ -8,6 +8,7 @@ Personal [Agent Skills](https://www.agensi.io/learn/agent-skills-open-standard) 
 
 | Skill | What it does |
 | --- | --- |
+| `algo-rewrite` | Whole-codebase algorithmic rewrite pipeline for C++ — inventory every algorithm and data flow with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, then settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, two-axis speed-vs-simplicity adoption), assemble winners into a sibling v2 folder with class-map tests + fuzzing, and finish with cpp-harden. |
 | `cpp-harden` | Iterative, low-noise C++ hardening review that only fixes proven defects — boundary violations, concurrency bugs (data races/deadlocks), memory leaks/lifetime errors (UAF, double-free), and uninitialized/garbage data. |
 
 <!-- SKILLS:END -->
