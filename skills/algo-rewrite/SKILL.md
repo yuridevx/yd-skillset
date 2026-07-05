@@ -1,56 +1,78 @@
 ---
 name: algo-rewrite
-description: Whole-codebase algorithmic rewrite pipeline for C++ — inventory every algorithm and data flow with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, then settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, two-axis speed-vs-simplicity adoption), assemble winners into a sibling v2 folder with class-map tests + fuzzing, and finish with cpp-harden. Single user gate after triage; fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "algo-rewrite", "/algo-rewrite", "algorithmic rewrite", "rewrite the algorithms", "optimize algorithms into v2", "make this algorithmically optimal", "rewrite for performance".
+description: Whole-codebase algorithmic rewrite pipeline for C++ — inventory every algorithm, data flow, and feature with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, two-axis speed-vs-simplicity adoption), assemble winners into a fresh-file sibling v2 with class-map tests + fuzzing, audit feature parity with a gap-hunter agent that can force full re-iteration, and finish with cpp-harden. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate, fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "algo-rewrite", "/algo-rewrite", "algorithmic rewrite", "rewrite the algorithms", "optimize algorithms into v2", "make this algorithmically optimal", "rewrite for performance".
 ---
 
 # algo-rewrite
 
-Benchmark-gated algorithmic rewrite. Core principle: **an optimization does not exist until a benchmark says it does** — the twin of cpp-harden's "a defect does not exist until a failing test says it does." Every phase is a kill-filter; code lands in v2 only after surviving all of them.
+Benchmark-gated algorithmic rewrite. Core principle: **an optimization does not exist until a benchmark says it does** — the twin of cpp-harden's "a defect does not exist until a failing test says it does."
 
-The main thread runs **linearly** and owns all state. Independent agents (same model as the main thread) are used for exactly two jobs: adversarial proof of ideas (Phase 4) and correctness triage of prototypes (Phase 6). Agents receive only the artifact under judgment plus its checklist — never the generator's reasoning — so they cannot inherit its optimism.
+The skill is a chain of **gates**. A gate is not a phase to schedule work into — it is a checkpoint with a hard exit condition; you are always standing at exactly one gate, doing its work, and you may not step past it until its exit condition is objectively green. There is no "later": work either happens at its gate or is killed at its gate.
+
+The main thread runs linearly and owns all state. Independent agents (same model as the main thread) are used for exactly three jobs: killing ideas at REFUTE, correctness-triaging prototypes at SHOOTOUT, and hunting missing features at PARITY. Agents receive only the artifact under judgment plus its checklist — never the generating thread's reasoning — so they cannot inherit its optimism.
+
+## Flow map
+
+```
+SETUP → SCAN → TRIAGE → ASK ══ only user stop (skipped if "autonomous")
+                          │
+      ┌───────────────────▼────────────────────────────────────┐
+      │ REWRITE LOOP                                           │
+      │ IDEATE → REFUTE → BASELINE → SHOOTOUT → ASSEMBLE       │
+      │    ▲                                        │          │
+      │    │                                     PROVE         │
+      │    │                                        │          │
+      │    └── CONFIRMED-GAP features ◄────────  PARITY        │
+      │        (full loop, never a band-aid)        │          │
+      └─────────────────────────────────────────────┼──────────┘
+                        zero design-defining claims ▼
+                                       HARDEN → REPORT
+```
 
 ## Autonomy contract
 
-- **Exactly one user interaction: the Gate (Phase 2.5).** Every question the run will ever need is batched there.
-- Beyond the gate, **never** ask "shall I proceed", "say go", "do you want me to continue", or present intermediate results as questions. The only stop conditions are a broken baseline at Phase 0 and completion at Phase 10.
-- If the invocation contains "autonomous", "auto", "no questions", or equivalent intent: **skip the gate entirely**, decide everything solo, run Phase 0 → 10 end to end. Either way, every gate-class decision is recorded in the ledger (user-answered or self-decided) so the report shows what was chosen and why.
+- **Exactly one user interaction: the ASK gate.** Every question the run will ever need is batched there.
+- Past ASK, **never** ask "shall I proceed", "say go", "want me to continue", or present intermediate results as questions. The only stops are a broken baseline at SETUP and completion at REPORT.
+- If the invocation contains "autonomous", "auto", "no questions", or equivalent intent: **skip ASK entirely**, self-decide, run end to end. Either way every ASK-class decision lands in the ledger (user-answered or self-decided) so the report shows what was chosen and why.
 
-## Red-first rule (governs every phase that writes code)
+## Universal rules (govern every gate)
+
+### Red-first
 
 **No code exists before its oracle does.** Every unit of work opens red — a failing test or a recorded baseline benchmark — and closes green:
 
-- Harness self-check before the harness measures anything (Phase 0).
-- Per prototype: tests → baseline number confirmed → implement to green → benchmark (Phase 6). Tests written after the code make the prototype invalid.
-- Per v2 component: class map → 1:1 test set failing red against empty v2 → port to green → fuzz (Phase 7).
-- Per fix (triage failure, fuzz finding, integration regression): failing repro test → minimal fix to green → repro kept as regression guard.
+- Harness self-check before the harness measures anything (SETUP).
+- Per prototype: tests → baseline confirmed → implement to green → benchmark (SHOOTOUT). Tests written after code invalidate the prototype.
+- Per v2 component: class map → 1:1 tests failing red against empty v2 → port to green → fuzz (ASSEMBLE).
+- Per fix (triage failure, fuzz finding, regression, parity gap): failing repro/intent test → minimal fix to green → test kept as regression guard.
 - Benchmark-first is the performance twin: no optimization is implemented before the number it must beat is in the ledger.
 
 The report includes each component's red→green trail.
 
-## No-copy rule (governs all work in every phase)
+### No-copy
 
-**Never copy existing code and edit it — rewrite into new files as the work needs them.** This applies to prototypes, benchmarks, tests, harnesses, and the v2 tree alike. A "port" is a rewrite from the component's contract and behavior (with the original open as reference), not a file copy: copied files smuggle in the old structure, dead code, and compatibility residue — exactly what the no-compat rule exists to kill.
+**Never copy existing code and edit it — rewrite into new files as the work needs them.** Applies to prototypes, benchmarks, tests, harnesses, and the v2 tree alike. A "port" is a rewrite from the component's contract and behavior (original open as reference), never a file copy: copies smuggle in old structure, dead code, and compatibility residue — exactly what the no-compat rule exists to kill.
 
-The new file tree is designed, not accreted: one clear responsibility per file, headers/implementation split as the project's conventions dictate, directories that mirror the component structure from the ledger. Never dump everything into one file — a v2 that wins every benchmark but reads like a heap is a failed rewrite under the simplicity rule.
+The new file tree is designed, not accreted: one clear responsibility per file, header/implementation split per the project's conventions, directories mirroring the ledger's component structure. Never dump everything into one file — a v2 that wins every benchmark but reads like a heap is a failed rewrite under the simplicity rule.
 
-## Realtime rules (hot paths only)
+### Realtime (hot paths only)
 
-Hot path = any code on the per-item / per-frame / per-request path, tagged in Phase 2. Cold paths are exempt and judged on simplicity + throughput only.
+Hot path = any code on the per-item / per-frame / per-request path, tagged at TRIAGE. Cold paths are exempt and judged on simplicity + throughput only.
 
-1. **Zero allocations steady-state.** Memory acquired at init: preallocation, arenas/pools, SBO, reused scratch. First-call warmup allocation is fine; per-iteration allocation is a defect.
+1. **Zero allocations steady-state.** Memory acquired at init: preallocation, arenas/pools, SBO, reused scratch. Warmup allocation fine; per-iteration allocation is a defect.
 2. **No hidden allocators:** `std::function` beyond SBO, `std::string` temporaries, `std::vector` growth, `unordered_map` rehash, `shared_ptr` control blocks, iostreams, `std::regex`, throw/catch.
-3. **Bounded worst case beats better average.** No amortized-only guarantees where the spike lands on the hot path. If a container cannot pre-reserve to a known bound, the design is wrong.
-4. **No blocking:** no mutex waits, syscalls, I/O, or logging (ring-buffer deferred logging if needed). Concurrency via lock-free structures, per-thread ownership, or SPSC/MPSC stage handoff.
+3. **Bounded worst case beats better average.** No amortized-only guarantees where the spike lands on the hot path; a container that cannot pre-reserve to a known bound is the wrong design.
+4. **No blocking:** no mutex waits, syscalls, I/O, logging (ring-buffer deferred logging if needed). Concurrency via lock-free structures, per-thread ownership, or SPSC/MPSC stage handoff.
 5. **Errors by value** (`expected`/status codes); exceptions are setup/teardown territory.
 6. **Layout matches access pattern:** contiguous over node-based, SoA where the SIMD lens demands, padding against false sharing.
 
-Benchmark enforcement: a counting allocator is wired into every benchmark; **hot-path benchmarks assert 0 steady-state allocations** — nonzero fails regardless of speed. Latency reported as **median + p99 + max**; winning median while regressing max on a hot path is a loss.
+Enforcement: a counting allocator is wired into every benchmark; **hot-path benchmarks assert 0 steady-state allocations** — nonzero fails regardless of speed. Latency is **median + p99 + max**; winning median while regressing max on a hot path is a loss.
 
 ## State: the dossier
 
 ```
-algo-rewrite/            (scratchpad by default; in-repo if chosen at the gate)
-├── ledger.md            append/update only; re-read at the start of every phase
+algo-rewrite/            (scratchpad by default; in-repo if chosen at ASK)
+├── ledger.md            append/update only; re-read at every gate
 ├── bench/               harness, algo_bench.h, raw results (kept for reproducibility)
 └── <target>-v2/         the rewrite — nearest sibling folder to the original target
 ```
@@ -59,66 +81,85 @@ Ledger state machines:
 
 - Component: `INVENTORIED → TRIAGED → BASELINED → REWRITTEN | KEPT-AS-IS`
 - Idea: `IDEA → REFUTED | PROTOTYPED → TRIAGE-FAILED(→ REFIXED | LOST) | LOST | WON → INTEGRATED | REGRESSED-REVERTED`
-- Per component fields: `Path: hot|cold`, `Classes:` (equivalence map), `Fuzz:` (harness, runtime, findings), `Trail:` (red→green log)
-- Header: `Assumptions:` (every self-made call from Phases 0–2), target, toolchain, machine profile
+- Feature: `FEATURE → COVERED | SMALL-DIFF | DROPPED-BY-DESIGN | CONFIRMED-GAP → RE-ENTERED(iter N) → COVERED`
+- Per component: `Path: hot|cold`, `Classes:` (equivalence map), `Fuzz:` (harness, runtime, findings), `Trail:` (red→green log)
+- Header: `Assumptions:` (every self-made call), target, toolchain, machine profile, iteration counter
 
 The ledger is memory across context compaction; never delete entries.
 
-## Phase 0 — Setup gate (once, no questions)
+## The gates
 
-1. Determine target (diff, given paths, or whole repo). Ambiguity → take the reasonable reading, record under `Assumptions:`. Verify the project **builds and existing tests pass** — broken baseline → stop and report; nothing can be baselined on red.
-2. Detect toolchain: compiler, SIMD ISA (SSE/AVX2/AVX-512/NEON), thread facilities, package manager (vcpkg/conan/FetchContent).
-3. Install the benchmark harness **library-first**: Google Benchmark → nanobench → hand-rolled timing only if neither installs.
-4. Generate `bench/algo_bench.h`: `ALGO_BENCH_SCOPE(name)`, `ALGO_BENCH_COUNT(name, n)`, `ALGO_BENCH_ALLOC_GUARD(name)` gated on `ALGO_BENCH=1`; without the flag they expand to **nothing** — no branch, no atomic, no string. They may be placed in product code (v1 and v2) and left there permanently. **Self-check first (red-first):** under `ALGO_BENCH=1` the alloc guard catches a deliberate allocation; the same TU under release compiles to a no-op — assert both before the harness measures anything.
-5. Write the ledger header: target, toolchain, machine profile (CPU, cores, cache sizes) — numbers are meaningless without it.
+### SETUP
 
-## Phase 1 — Scan & inventory
+1. Determine target (diff, given paths, or whole repo). Ambiguity → take the reasonable reading, record under `Assumptions:`.
+2. Verify the project **builds and existing tests pass** — broken baseline → stop and report; nothing can be baselined on red.
+3. Detect toolchain: compiler, SIMD ISA (SSE/AVX2/AVX-512/NEON), threads, package manager (vcpkg/conan/FetchContent).
+4. Install the benchmark harness **library-first**: Google Benchmark → nanobench → hand-rolled timing only if neither installs.
+5. Generate `bench/algo_bench.h`: `ALGO_BENCH_SCOPE(name)`, `ALGO_BENCH_COUNT(name, n)`, `ALGO_BENCH_ALLOC_GUARD(name)` gated on `ALGO_BENCH=1`; without the flag they expand to **nothing** — no branch, no atomic, no string. They may live in product code (v1 and v2) permanently. Red-first self-check: under `ALGO_BENCH=1` the alloc guard catches a deliberate allocation; the same TU in release compiles to a no-op — assert both.
 
-Read the whole target. Record every **algorithmic component** — code that loops over data, searches, sorts, hashes, parses, allocates in a pattern, or converts representations — and every **data flow**: entry shape, each transformation, each copy, each intermediate representation.
+**Exit:** build green, tests pass, harness self-check red→green, ledger header written (target, toolchain, CPU/cores/caches — numbers are meaningless without the machine profile).
 
-Per component: location, role, current algorithm, **CPU complexity, memory complexity, allocation behavior**, data structures, hot-path weight (called from where, how often). Inventory only — no judging, no ideas yet.
+### SCAN
 
-## Phase 2 — Triage, four lenses (one pass per lens)
+Read the whole target. Record every **algorithmic component** (code that loops over data, searches, sorts, hashes, parses, allocates in a pattern, converts representations), every **data flow** (entry shape, each transformation, each copy, each intermediate), and the **feature map** — what the target does *for its users* at intent level: capability, why a user needs it, observable behavior, feature branches (modes, options, config-driven behaviors, documented edge semantics), where v1 implements it. **Guarantees are features too:** ordering stability, thread-safety promises, documented tolerances, complexity bounds callers rely on — the easiest things to lose silently.
 
-1. **SIMD:** vectorizable (contiguous, branch-light, no cross-iteration deps) / vectorizable-after-restructure (AoS→SoA etc.) / not vectorizable.
-2. **Concurrency:** current threading and its costs (lock contention, false sharing, oversubscription) + parallelizable-but-serial components.
-3. **Library** (dedicated pass — web research explicitly encouraged): for every component, does a proven public library already do this (abseil/folly containers, simdjson, xxhash, TBB/taskflow, EVE/xsimd/highway, fmt, …)? A hit becomes the idea *adopt library X*; any hand-rolled competitor must beat it head-to-head in Phase 6 to exist. Ties go to the library.
-4. **Hot/cold:** tag each component. Hot → realtime rules apply; cold → exempt.
+Per component: location, role, algorithm, **CPU + memory complexity, allocation behavior**, data structures, hot-path weight. Inventory only — no judging, no ideas.
 
-## Phase 2.5 — The Gate (the only user interaction)
+**Exit:** every component, flow, and feature in the ledger with complexity recorded.
 
-Present in one batch: assumptions taken so far, component inventory summary with hot/cold tags, library candidates found, and every genuine either-way call (dossier location, disputed hot/cold tags, scope questions). One question round. Answers go into the ledger; **Phases 3–10 then run end to end with zero further questions** — every later decision is resolved by the ledger, the adoption matrix, or a benchmark. In autonomous mode this phase is skipped and the same decisions are self-made and recorded.
+### TRIAGE
 
-## Phase 3 — Ideate (greenfield)
+Four lenses, one pass each:
 
-Per component, generate alternatives under **no-compatibility, no-fallback** rules: only the **spirit** of the public API must survive — same capabilities, free to change signatures, ownership, error model. No shims, no `#ifdef USE_OLD_PATH`. Killing a component entirely by changing the upstream representation is a first-class idea — the best optimization is deletion. Web research for state-of-the-art approaches is encouraged.
+1. **SIMD:** vectorizable (contiguous, branch-light, no cross-iteration deps) / vectorizable-after-restructure (AoS→SoA etc.) / not.
+2. **Concurrency:** current threading costs (contention, false sharing, oversubscription) + parallelizable-but-serial components.
+3. **Library** (dedicated pass — web research explicitly encouraged): does a proven public library already do this (abseil/folly, simdjson, xxhash, TBB/taskflow, EVE/xsimd/highway, fmt, …)? A hit becomes the idea *adopt library X*; hand-rolled competitors must beat it head-to-head at SHOOTOUT. Ties go to the library.
+4. **Hot/cold:** tag every component; hot → realtime rules apply.
 
-Simplicity gate at the door: every idea states its complexity cost. Hot-path ideas must obey the realtime rules; obvious violations are refuted on the spot. A 1.05× win that adds a dependency dies here.
+**Exit:** every component tagged on all four lenses.
 
-## Phase 4 — Adversarial proof (independent agents)
+### ASK — the only user stop
 
-One agent per surviving `IDEA`, given only: the idea, the component's code, and this kill-checklist —
+Present in one batch: assumptions taken, inventory summary with hot/cold tags, library candidates, planned feature drops, and every genuine either-way call (dossier location, disputed tags, scope). One question round; answers go into the ledger. In autonomous mode: skip, self-decide, record.
+
+**Exit:** every ASK-class decision in the ledger. From here to REPORT, zero questions — every later decision is resolved by the ledger, the adoption matrix, or a benchmark.
+
+### IDEATE (rewrite loop entry — re-entered by PARITY)
+
+Per component, generate alternatives under **no-compatibility, no-fallback** rules: only the **spirit** of the public API must survive — same capabilities, free to change signatures, ownership, error model. No shims, no `#ifdef USE_OLD_PATH`. Killing a component by changing the upstream representation is a first-class idea — the best optimization is deletion. Web research for state-of-the-art approaches encouraged.
+
+An idea that deletes or narrows a capability must declare `DROPS: <feature> — <rationale>` (surfaced at ASK, or self-decided and recorded). This is what lets PARITY distinguish deliberate removal from accidental loss.
+
+Simplicity at the door: every idea states its complexity cost. Hot-path ideas must obey the realtime rules; obvious violations die here. A 1.05× win that adds a dependency dies here.
+
+**Exit:** every live component has its ideas recorded, each with complexity cost and any `DROPS:` declared.
+
+### REFUTE (independent agents)
+
+One agent per idea, given only the idea, the component's code, and the kill-checklist:
 
 - Complexity math holds at **realistic N**? (O(n log n)→O(n) is noise at n ≤ 64.)
 - Constant factors: cache behavior, branch predictability, allocation count — not just big-O.
-- SIMD: is the layout actually amenable, or does gather/scatter eat the win?
+- SIMD: layout actually amenable, or does gather/scatter eat the win?
 - Concurrency: enough work per task to amortize synchronization?
-- Library: actually covers the use case (read its docs), maintained, installs on this toolchain?
+- Library: actually covers the use case (read the docs), maintained, installs on this toolchain?
 - Realtime compliance for hot-path ideas.
 
-Verdict rule — **doubt flows forward** (the benchmark is a cheap objective judge downstream); certainty-it-cannot-win or a simplicity violation → `REFUTED` with a one-line reason. The main thread records all dispositions.
+Verdict rule — **doubt flows forward** (the benchmark downstream is a cheap objective judge); certainty-it-cannot-win or a simplicity violation → `REFUTED` with a one-line reason.
 
-## Phase 5 — Baseline benchmark
+**Exit:** every idea dispositioned; main thread has recorded all verdicts.
 
-For every component with ≥1 surviving idea: benchmark **current v1** — realistic data shapes at small/typical/large sizes, measuring median + p99 + max latency, allocation count, peak memory, with the counting allocator wired in. Also capture in-situ macro baselines on v1 (these are Phase 8's bar). **No prototype exists before its baseline does.**
+### BASELINE
 
-## Phase 6 — A/B/C shootout + correctness gate
+For every component with a surviving idea: benchmark **current v1** — realistic shapes at small/typical/large sizes; median + p99 + max latency, allocation count, peak memory, counting allocator wired in. Also capture in-situ macro baselines on v1 — these are PROVE's bar.
 
-Per component: minimal prototypes of each surviving idea (A = v1 baseline, B/C/… = candidates), same harness, same data. Prototype only the algorithmic core — no productionizing losers.
+**Exit:** the number every candidate must beat is in the ledger. No prototype exists before its baseline does.
 
-Order per candidate (red-first): main-flow + edge tests written first (failing — nothing implements them) → implement to green → benchmark.
+### SHOOTOUT
 
-**Correctness gate before any benchmark counts:** an independent triage agent per prototype checks breakage, edge cases, safe coding (boundaries, overflow, lifetime, UB), realtime compliance, and that tests predate code (ledger trail). Fail → fix and **re-benchmark** (the fix may eat the win), or `LOST`. The agent also assigns the candidate's **complexity class**: simpler/same, more complex, or hack (fragile cleverness, UB-adjacent tricks, layout gymnastics). Libraries replacing hand-rolled code count as **simpler** — complexity we don't maintain doesn't count against us.
+Per component: minimal prototypes of each surviving idea (A = v1, B/C/… = candidates), same harness, same data. Prototype only the algorithmic core — no productionizing losers. Order per candidate (red-first): main-flow + edge tests written failing → implement to green → benchmark.
+
+**Correctness gate before any benchmark counts:** an independent triage agent per prototype checks breakage, edge cases, safe coding (boundaries, overflow, lifetime, UB), realtime compliance, and that tests predate code (ledger trail). Fail → fix and **re-benchmark** (the fix may eat the win), or `LOST`. The agent also assigns the **complexity class**: simpler/same, more complex, or hack (fragile cleverness, UB-adjacent tricks, layout gymnastics). Libraries replacing hand-rolled code count as **simpler** — complexity we don't maintain doesn't count against us.
 
 **Adoption matrix:**
 
@@ -127,32 +168,56 @@ Order per candidate (red-first): main-flow + edge tests written first (failing �
 | real win (above run-to-run noise) | **ADOPT** — slightly faster beats simple | only if **≥2× on a measured hot path** | REJECT — simple-but-slower wins |
 | tie / loss | only if simpler | REJECT | REJECT |
 
-Hot-path hard gates apply on top: 0 steady-state allocations, and max-latency regression = loss. All results land in the ledger with actual numbers.
+Hot-path hard gates on top: 0 steady-state allocations; max-latency regression = loss.
 
-## Phase 7 — Build v2: tests first, then port, then fuzz
+**Exit:** every candidate `WON` or `LOST` via the matrix, with actual numbers in the ledger.
 
-Assemble `<target>-v2/` from `WON` entries only; everything else is the **simplest faithful port** — written fresh per the no-copy rule, into a deliberately designed file tree. Per component, in this order:
+### ASSEMBLE
 
-1. **Class map:** enumerate the representable input classes from the public API contract — empty, one element, typical, max-size, boundary values, malformed-only-if-reachable. Inputs the contract makes impossible are **out of scope**: no breaking things under unrealistic expectations.
-2. **Minimal test set:** exactly one test per class plus main flows — the optimal set is the smallest where every class appears once; redundant tests are noise and get refused like redundant candidates. Written **red against the empty v2**, recorded in the ledger as `Classes: N → Tests: N (1:1)`.
+Build `<target>-v2/` from `WON` entries only; everything else is the **simplest faithful port** — fresh files per the no-copy rule, into a deliberately designed tree. Per component, in order:
+
+1. **Class map:** enumerate representable input classes from the public API contract — empty, one element, typical, max-size, boundaries, malformed-only-if-reachable. Contract-impossible inputs are **out of scope**: no breaking things under unrealistic expectations.
+2. **Minimal test set:** exactly one test per class plus main flows — the smallest set where every class appears once; redundant tests are refused like redundant candidates. Written **red against the empty v2**; ledger records `Classes: N → Tests: N (1:1)`.
 3. **Port/integrate to green.**
-4. **Fuzz:** structure-aware harness at each trust boundary, generating contract-valid inputs (bytes into parsers; arrays into sorters — never garbage memory into internal APIs). libFuzzer (clang / clang-cl on MSVC), time-boxed: 60s/component default, longer for parsers/decoders. Findings become ledger entries and **block adoption of that part** until fixed red-first.
+4. **Fuzz:** structure-aware harness per trust boundary, contract-valid inputs (bytes into parsers, arrays into sorters — never garbage into internal APIs). libFuzzer (clang / clang-cl on MSVC), time-boxed: 60s/component default, longer for parsers/decoders. Findings block that part until fixed red-first.
 
-## Phase 8 — Integrated benchmark & adopt
+**Exit:** v2 complete, class-map tests 1:1 green, fuzz clean.
 
-Re-measure every integrated part **in situ** via the gated macros inside real v2 flows, plus end-to-end runs vs the v1 macro baselines from Phase 5. Microbenches judged the shootout; in-situ numbers judge integration. A part that won isolated but regresses integrated → `REGRESSED-REVERTED`, replaced by the simple port. Exit criteria: v2 tests green + fuzz clean + every adopted win confirmed in situ.
+### PROVE
 
-## Phase 9 — Harden
+Re-measure every integrated part **in situ** via the gated macros inside real v2 flows, plus end-to-end vs the v1 macro baselines. Microbenches judged the shootout; in-situ numbers judge integration. Won-isolated-but-regressed-integrated → `REGRESSED-REVERTED`, replaced by the simple port.
 
-Invoke the **cpp-harden** skill on `<target>-v2/`. It runs its own full convergence loop with its own ledger; the fuzz harnesses from Phase 7 are handed over as extra oracles.
+**Exit:** every adopted win confirmed in place; regressions reverted; tests green + fuzz clean.
 
-## Phase 10 — Report (once)
+### PARITY (1 gap-hunter agent per pass — can force a new loop iteration)
+
+One agent receives v1, v2, the feature map, and the `DROPS:` list — not the rewrite thread's reasoning. Mandate: find features present in v1 whose **intent** is absent in v2, and **triage severity itself**:
+
+- **Design-defining** — a capability, mode, or guarantee users build around; losing it forces callers to hand-roll logic or restructure usage. Only these come back as `PARITY-CLAIM`s.
+- **Small** — convenience overloads, incidental output details, precision nuances, one-line-recoverable behaviors. Returned as `SMALL-DIFF` notes: recorded, never actioned. Unsure → must argue "usage would restructure without it"; can't → small.
+
+The **spirit rule** for judging: changed signatures/error models, different internals, float drift within reasonable tolerance, renamed/merged concepts = fine. Missing capability, silently narrowed input domain, dropped mode, lost guarantee = gap. "Line X has no equivalent" and "differs at the 5th decimal" are not claims.
+
+Main thread adjudicates each claim: **refute with a trace** of how v2 serves the intent / **DROPPED-BY-DESIGN** (matches a declared drop) / **CONFIRMED-GAP**. An undeclared drop is always a confirmed gap — even if dropping was right, the decision must become explicit, never accidental.
+
+**Confirmed gaps get the full pipeline, not band-aids:** each is registered in the ledger and the rewrite loop **re-enters at IDEATE** for that feature set — ideate how the capability fits v2's design natively, refute, baseline against v1's implementation, shoot out alternatives, assemble red-first with class map + fuzz, prove in situ. The result is indistinguishable from first-iteration work: same rules, same gates, same evidence.
+
+**Exit:** a full gap-hunter pass (fresh agent) returns **zero new design-defining claims**. Cost per pass: exactly 1 agent call.
+
+### HARDEN
+
+Invoke the **cpp-harden** skill on `<target>-v2/`. It runs its own full convergence loop with its own ledger; the fuzz harnesses from ASSEMBLE are handed over as extra oracles.
+
+**Exit:** cpp-harden converged.
+
+### REPORT
 
 From the ledger, cumulative:
 
 - **Adopted** — per part: before/after numbers (median/p99/max, allocs), complexity class, red→green trail.
 - **Library adoptions** — what replaced hand-rolled code and why it won or tied.
-- **Refuted / lost / reverted** — one line each; this is the noise receipt ("31 ideas, 6 adopted, here's why the rest died").
+- **Refuted / lost / reverted** — one line each: the noise receipt ("31 ideas, 6 adopted, here's why the rest died").
+- **Parity matrix** — `N features → covered / dropped-by-design (rationale) / migrated-after-audit`, plus refuted claims — the receipt that the audit had teeth.
 - **Coverage** — per component `Classes: N → Tests: N`, fuzz runtime + findings.
 - **Machine profile** and exact commands to re-run `bench/`.
 
