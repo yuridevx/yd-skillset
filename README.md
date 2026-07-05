@@ -10,7 +10,7 @@ Personal [Agent Skills](https://www.agensi.io/learn/agent-skills-open-standard) 
 | --- | --- |
 | `algo-rewrite` | Whole-codebase algorithmic rewrite pipeline for C++ — inventory every algorithm, data flow, and feature with CPU/memory complexity, triage through SIMD / concurrency / library-first / hot-cold lenses, ideate greenfield replacements under a no-compatibility rule, adversarially refute ideas in independent agents, settle survivors by A/B/C benchmark shootout (red-first TDD, zero-alloc hot paths, two-axis speed-vs-simplicity adoption), assemble winners into a fresh-file sibling v2 with class-map tests + fuzzing, audit feature parity with a gap-hunter agent that can force full re-iteration, and finish with cpp-harden. |
 | `cpp-harden` | Iterative, low-noise C++ hardening review that only fixes proven defects — boundary violations, concurrency bugs (data races/deadlocks), memory leaks/lifetime errors (UAF, double-free), and uninitialized/garbage data. |
-| `mastermind` | Meta-skill that turns the expensive main-thread model into a pure decision-maker — every file read, search, build, edit, and web lookup is executed by cheaper-model subagents; the main thread is forbidden all direct IO and tools except agent dispatch and the todo list. |
+| `mastermind` | Meta-skill that turns the expensive main-thread model into a pure decision-maker — every file read, search, build, edit, and web lookup is executed by cheaper-model subagents; the main thread is forbidden all direct IO and tools except agent dispatch, skill invocation, and the todo list. |
 
 <!-- SKILLS:END -->
 

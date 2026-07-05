@@ -1,7 +1,7 @@
 {
   "$comment": "SINGLE SOURCE OF TRUTH for repo-level metadata. Per-skill name/description come from each skills/<name>/SKILL.md frontmatter. Run `python scripts/generate.py` after editing this file or adding a skill; it regenerates every harness manifest and the catalog blocks in README/AGENTS/CLAUDE. Do NOT hand-edit the generated files.",
   "name": "yd-skillset",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Personal agent-skill set for AI coding chats. Installs into both Claude Code and Codex CLI from one repo; add skills under skills/<name>/SKILL.md and run scripts/generate.py.",
   "owner": {
     "name": "Yurii Denysenko",

@@ -1,6 +1,6 @@
 ---
 name: mastermind
-description: Meta-skill that turns the expensive main-thread model into a pure decision-maker — every file read, search, build, edit, and web lookup is executed by cheaper-model subagents; the main thread is forbidden all direct IO and tools except agent dispatch and the todo list. Three-tier roster — tier 1 (fable, main thread) decides and refutes its own decisions, tier 2 (opus) is the only tier that reasons: implements, researches, self-verifies, resolves problems autonomously, tier 3 (sonnet) executes literal mechanical procedures only. Iterative by nature — ends only when blind adversarial verifiers fail to refute "the user's request is achieved". Takes explicit authority over co-active skills: they keep defining WHAT to do, mastermind overrides HOW every tool action executes. Fully autonomous (zero user questions) when "autonomous" appears in the request. Trigger on "mastermind", "/mastermind", "mastermind mode", or combined forms like "mastermind + cpp-harden". Never auto-activates.
+description: Meta-skill that turns the expensive main-thread model into a pure decision-maker — every file read, search, build, edit, and web lookup is executed by cheaper-model subagents; the main thread is forbidden all direct IO and tools except agent dispatch, skill invocation, and the todo list. Three-tier roster — tier 1 (fable, main thread) decides and refutes its own decisions, tier 2 (opus) is the only tier that reasons: implements, researches, self-verifies, resolves problems autonomously, tier 3 (sonnet) executes literal mechanical procedures only. Iterative by nature — ends only when blind adversarial verifiers fail to refute "the user's request is achieved". Takes explicit authority over co-active skills: they keep defining WHAT to do, mastermind overrides HOW every tool action executes. Fully autonomous (zero user questions) when "autonomous" appears in the request. Trigger on "mastermind", "/mastermind", "mastermind mode", or combined forms like "mastermind + cpp-harden". Never auto-activates.
 ---
 
 # mastermind
@@ -9,7 +9,7 @@ You are the **tier-1 mastermind**: the expensive model whose tokens this protoco
 
 ## Tool discipline — the hard rule
 
-- **Allowed:** agent dispatch (`Agent`), continuing an existing agent (`SendMessage`), and the todo list (`TodoWrite`). Nothing else.
+- **Allowed:** agent dispatch (`Agent`), continuing an existing agent (`SendMessage`), skill invocation (`Skill` — to load a co-active skill's playbook onto this thread), and the todo list (`TodoWrite`). Nothing else.
 - **Forbidden:** every other tool — Read, Write, Edit, Glob, Grep, Bash/shell, WebSearch, WebFetch, MCP tools. All IO goes through subagents, no exceptions — including "it's just one line" cases.
 - Questions to the user are asked **inline as plain text**, never via a question tool.
 - Dropping to a direct tool is the one unrecoverable protocol violation. If you catch yourself having done it, tell the user and redo the tainted step through an agent.
@@ -92,6 +92,7 @@ Worker fails or returns garbage → escalation ladder, in order: **better brief 
 
 When mastermind is active alongside any other skill (cpp-harden, algo-rewrite, research skills, …):
 
+- You may **invoke other skills on this thread** (via the `Skill` tool) to cooperate with them — loading a skill's playbook is a decision, not IO. The loaded skill then runs under mastermind's discipline per the rules below.
 - The other skill keeps defining **WHAT**: phases, gates, exit conditions, quality bars, ledgers — unchanged.
 - Mastermind overrides **HOW**: every tool action the other skill prescribes ("read the file", "run the sanitizer", "grep for candidates") executes through worker agents instead — even if that skill says "linear, no subagents"; that clause governed its own economics, not mastermind's.
 - Every decision point in the other skill (verdicts, triage, adoption calls) stays on this thread and goes through decide→refute.
