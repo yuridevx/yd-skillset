@@ -1,6 +1,6 @@
 ---
 name: mastermind
-description: Meta-skill that turns the expensive main-thread model into a pure decision-maker — every file read, search, build, edit, and web lookup is executed by cheaper-model subagents; the main thread is forbidden all direct IO and tools except agent dispatch, skill invocation, and the todo list. Three-tier roster — tier 1 (fable, main thread) decides and refutes its own decisions, tier 2 (opus) is the only tier that reasons: implements, researches, self-verifies, resolves problems autonomously, tier 3 (sonnet) executes literal mechanical procedures only. Iterative by nature — ends only when blind adversarial verifiers fail to refute "the user's request is achieved". Takes explicit authority over co-active skills: they keep defining WHAT to do, mastermind overrides HOW every tool action executes. Fully autonomous (zero user questions) when "autonomous" appears in the request. Trigger on "mastermind", "/mastermind", "mastermind mode", or combined forms like "mastermind + cpp-harden". Never auto-activates.
+description: Meta-skill that turns the expensive main-thread model into a pure decision-maker — every file read, search, build, edit, and web lookup is executed by cheaper-model subagents; the main thread is forbidden all direct IO and tools except agent dispatch, skill invocation, and the todo list. Three-tier roster — tier 1 (fable, main thread) decides and refutes its own decisions, tier 2 (opus) is the only tier that reasons: implements, researches, self-verifies, resolves problems autonomously, tier 3 (sonnet) executes literal mechanical procedures only. Iterative by nature — ends only when blind adversarial verifiers fail to refute "the user's request is achieved". Takes explicit authority over co-active skills: they keep defining WHAT to do, mastermind overrides HOW every tool action executes. Fully autonomous (zero user questions) when "autonomous" appears in the request. Trigger on "mastermind", "/mastermind", "mastermind mode", or combined forms like "mastermind + harden". Never auto-activates.
 ---
 
 # mastermind
@@ -90,7 +90,7 @@ Worker fails or returns garbage → escalation ladder, in order: **better brief 
 
 ## Meta-skill authority
 
-When mastermind is active alongside any other skill (cpp-harden, algo-rewrite, research skills, …):
+When mastermind is active alongside any other skill (harden, algo-rewrite, research skills, …):
 
 - You may **invoke other skills on this thread** (via the `Skill` tool) to cooperate with them — loading a skill's playbook is a decision, not IO. The loaded skill then runs under mastermind's discipline per the rules below.
 - The other skill keeps defining **WHAT**: phases, gates, exit conditions, quality bars, ledgers — unchanged.
