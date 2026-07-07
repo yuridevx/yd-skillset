@@ -1,6 +1,6 @@
 ---
 name: ux-rewrite
-description: Whole-product greenfield UX rewrite pipeline — inventory every screen, flow, and user journey; extract per-journey cards that split observable behavior into PINNED / FLEXIBLE / SUSPECT under the journey-oracle rule (v1 witnesses the user's intent, never the screen layout; pixel-for-pixel compatibility is refused, and deliberate dark patterns are adjudicated, never preserved); capture one run-wide theme brief — the new visual theme (direction, tokens, component idiom) every v2 screen is built on; triage journeys through friction / navigation-depth / cognitive-load / consistency / accessibility / hot-cold lenses; then run each journey through a pipeline — ideate greenfield flows under a no-layout-compatibility rule with click minimization bounded by each task's intrinsic-input floor, adversarially refute each journey's ideas in an independent comparative refuter that nominates a worst-case persona or path per survivor, settle survivors by interaction-cost shootout (counted clicks, field entries, screen transitions, decisions, scrolls, waits — recorded per path, never asserted), build fresh v2 screens on the theme brief with red-first flow tests where a harness exists, verify each through the adversarial spine — blind walkthrough hunters over edge personas, a state-hunter attacking back/refresh/deep-link/abandon, safety enforcement at every destructive or irreversible boundary (undo over confirm where reversible, never fewer steps than safety demands), and an accessibility pass — prove in situ by driving the real v2 end to end and re-counting cost against v1 baselines, and audit capability parity with a gap-hunter agent that catches clicks saved by hiding features and can force full re-iteration. Twin creeds — friction does not exist until an interaction-cost count says it does; a flow is not usable until it survives an adversarial walkthrough. Agent dispatch is leveled by a run-wide tag named for its policy — per-claim / batched (default) / minimal / inline — chosen in the invocation or at ASK; cost counting, safety enforcement, parity, and the theme brief are never leveled away, and inline runs record every not-blind judgment. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate (where the theme brief is confirmed), fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "ux-rewrite", "/ux-rewrite", "UX rewrite", "rewrite the UX", "redesign the flows", "redesign the user experience", "minimize clicks", "simplify the flows", "user journey rewrite", "rethink the screens".
+description: Whole-product greenfield UX rewrite pipeline — inventory every screen, flow, and user journey plus the underlying capability surface (library API, service endpoints, domain operations), so use cases the product supports but the UI never exposed surface as UNSERVED and earn journeys of their own; extract per-journey cards that split observable behavior into PINNED / FLEXIBLE / SUSPECT under the journey-oracle rule (v1 witnesses the user's intent, never the screen layout; pixel-for-pixel compatibility is refused, and deliberate dark patterns are adjudicated, never preserved); capture one run-wide theme brief — the new visual theme (direction, tokens, component idiom) every v2 screen is built on; triage journeys through friction / navigation-depth / cognitive-load / consistency / accessibility / hot-cold lenses; then run each journey through a pipeline — ideate greenfield flows under a no-layout-compatibility rule with click minimization bounded by each task's intrinsic-input floor, adversarially refute each journey's ideas in an independent comparative refuter that nominates a worst-case persona or path per survivor, settle survivors by interaction-cost shootout (counted clicks, field entries, screen transitions, decisions, scrolls, waits — recorded per path, never asserted), build fresh v2 screens on the theme brief with red-first flow tests where a harness exists, verify each through the adversarial spine — blind walkthrough hunters over edge personas, a state-hunter attacking back/refresh/deep-link/abandon, safety enforcement at every destructive or irreversible boundary (undo over confirm where reversible, never fewer steps than safety demands), and an accessibility pass — prove in situ by driving the real v2 end to end and re-counting cost against v1 baselines, and audit capability parity with a gap-hunter agent that catches clicks saved by hiding features, checks UI coverage of the whole capability surface, and can force full re-iteration. Twin creeds — friction does not exist until an interaction-cost count says it does; a flow is not usable until it survives an adversarial walkthrough. Agent dispatch is leveled by a run-wide tag named for its policy — per-claim / batched (default) / minimal / inline — chosen in the invocation or at ASK; cost counting, safety enforcement, parity, and the theme brief are never leveled away, and inline runs record every not-blind judgment. Runs as a chain of named gates, each with a hard exit condition — one user question batch at the ASK gate (where the theme brief is confirmed), fully autonomous end-to-end when "autonomous" appears in the request. Trigger on "ux-rewrite", "/ux-rewrite", "UX rewrite", "rewrite the UX", "redesign the flows", "redesign the user experience", "minimize clicks", "simplify the flows", "user journey rewrite", "rethink the screens".
 ---
 
 # ux-rewrite
@@ -27,6 +27,7 @@ Every positive claim has a named adversary that must fail to kill it before the 
 | "this destructive step is safe" | safety enforcement, per-boundary checklist | VERIFY |
 | "everyone can use it" | accessibility pass | VERIFY |
 | "v2 serves every v1 capability" | gap-hunter | PARITY |
+| "the UI serves every underlying capability" | capability-surface map; gap-hunter coverage mandate | SCAN / PARITY |
 | "v1's behavior here is right" | friction lens; SUSPECT adjudicated before pinning | TRIAGE / JOURNEY |
 
 ## Agent economy
@@ -143,7 +144,7 @@ ux-rewrite/              (scratchpad by default; in-repo if chosen at ASK)
 └── <target>-v2/         the rebuilt screens/flows — nearest sibling to the original target
 ```
 
-Working state is an in-dialog status table — one line per journey, idea, and capability: id, tags (`HOT/COLD`, `TRUST-BOUNDARY`, `SUSPECT`), current status, the cost tuples or one-line reason that justify it, and — once VERIFY has run — the journey's **verification ledger**: which adversaries ran and claims-vs-actioned. Status vocabulary: journeys end `REBUILT | KEPT-AS-IS`; ideas end `REFUTED | LOST | WON`; capabilities end `COVERED | SMALL-DIFF | DROPPED-BY-DESIGN` (via `CONFIRMED-GAP` when PARITY forces re-entry); SUSPECT behaviors end `ACCIDENTAL-FRICTION | DARK-PATTERN | LOAD-BEARING-QUIRK`. Header: `Assumptions:`, target, platform posture, theme-brief status, agent-economy level, iteration counter.
+Working state is an in-dialog status table — one line per journey, idea, and capability: id, tags (`HOT/COLD`, `TRUST-BOUNDARY`, `SUSPECT`), current status, the cost tuples or one-line reason that justify it, and — once VERIFY has run — the journey's **verification ledger**: which adversaries ran and claims-vs-actioned. Status vocabulary: journeys end `REBUILT | KEPT-AS-IS`; ideas end `REFUTED | LOST | WON`; capabilities end `COVERED | SMALL-DIFF | DROPPED-BY-DESIGN | OUT-OF-SCOPE` (via `CONFIRMED-GAP` when PARITY forces re-entry); `UNSERVED` capabilities are adjudicated `NEW-JOURNEY | OUT-OF-SCOPE`; SUSPECT behaviors end `ACCIDENTAL-FRICTION | DARK-PATTERN | LOAD-BEARING-QUIRK`. Header: `Assumptions:`, target, platform posture, theme-brief status, agent-economy level, iteration counter.
 
 Restate the current table compactly at every gate exit — never drop a line; the restatement is what carries the record through context compaction. Anything an agent needs (journey card, flow spec, theme brief, capability map, `DROPS:` list) is passed explicitly in its prompt.
 
@@ -162,9 +163,11 @@ Restate the current table compactly at every gate exit — never drop a line; th
 
 Walk the whole target. Record every **screen** (route, purpose, entry points), every **flow** (the click-path graph between screens), and the **journey map** — what users accomplish, at intent level: the task, who performs it and how often, entry points, the outcome, and every capability on the way (modes, filters, bulk actions, shortcuts, config-driven behaviors). **Capabilities are features:** keyboard shortcuts, URL addressability, saved state, offline behavior, notification side effects — the easiest things to lose silently in a redesign.
 
+Where the UI fronts a deeper **capability surface** — a library, an API, a service, a domain model — inventory that surface too: every operation, mode, and option a user could legitimately need, read from the code and docs beneath the UI, not from the UI. Map each capability to the journey(s) serving it; a capability with none is tagged **`UNSERVED`** — a use case the product supports but the UI never exposed. UNSERVED capabilities are journey candidates, not footnotes: a UX rewrite that faithfully rebuilds an incomplete UI has rebuilt the incompleteness.
+
 Every journey gets one status-table line. Inventory only — no judging, no ideas.
 
-**Exit:** every screen, flow, and journey in the status table; each journey's screens and capabilities listed.
+**Exit:** every screen, flow, and journey in the status table; every underlying capability mapped to a journey or tagged `UNSERVED`.
 
 ### JOURNEY
 
@@ -201,15 +204,17 @@ Draft the theme brief per its section above: audit v1's current visual language 
 
 ### ASK — the only user stop
 
-Present in one batch: assumptions taken, journey inventory with tags, **SUSPECT adjudications** (with the recommended verdict each — every `DARK-PATTERN` is decided here: fix or preserve, on the record), the **theme brief** for confirmation or correction, the agent-economy level (when the invocation didn't set it), planned capability drops, and every genuine either-way call (artifact location, disputed tags, scope). One question round; answers are recorded. In autonomous mode: skip, self-decide, record.
+Present in one batch: assumptions taken, journey inventory with tags, **SUSPECT adjudications** (with the recommended verdict each — every `DARK-PATTERN` is decided here: fix or preserve, on the record), **UNSERVED capabilities** (serve with a new journey vs `OUT-OF-SCOPE`, with the recommended verdict each — not every library function deserves a screen, but every omission must be a decision), the **theme brief** for confirmation or correction, the agent-economy level (when the invocation didn't set it), planned capability drops, and every genuine either-way call (artifact location, disputed tags, scope). One question round; answers are recorded. In autonomous mode: skip, self-decide, record.
 
-**Exit:** every ASK-class decision recorded; theme brief confirmed; every SUSPECT behavior adjudicated. From here to REPORT, zero questions.
+**Exit:** every ASK-class decision recorded; theme brief confirmed; every SUSPECT behavior and every `UNSERVED` capability adjudicated. From here to REPORT, zero questions.
 
 ### IDEATE (pipeline entry — re-entered by PARITY)
 
 Per journey, generate alternative flows under **no-layout-compatibility** rules: only the intent must survive — free to merge screens, kill screens, change navigation, replace a wizard with one form or one form with progressive disclosure, move work to defaults, or eliminate the journey by making its trigger unnecessary. Killing a screen by changing an upstream flow is a first-class idea — the best flow is the one the user never has to enter.
 
 An idea that removes or narrows a capability must declare `DROPS: <capability> — <rationale>` (surfaced at ASK, or self-decided and recorded). This is what lets PARITY distinguish deliberate removal from accidental loss.
+
+**`NEW-JOURNEY` capabilities enter here too:** a journey card is written first (JOURNEY's format — intent, floor, states, boundaries; there is no v1 flow to split, so all behavior starts FLEXIBLE except what the capability's own contract pins), then ideation proceeds as usual. No v1 flow to imitate is freedom, not a gap — the capability and its floor are the whole brief.
 
 Cost honesty at the door: every idea states its estimated tuple and where the cost went — clicks removed by moving them to another journey, to setup, or to cognitive load must say so. Hot-journey ideas must obey the hot-journey rules; safety-shaving ideas die here.
 
@@ -235,6 +240,8 @@ Verdict rule — **doubt flows forward** (the count downstream is a cheap object
 ### BASELINE
 
 For every journey with a surviving idea: count **current v1** — main path, declared edge paths, and the nominated worst-case paths — via the walkthrough vehicle (drive it where possible; derive from code and record `DERIVED` where not). Also capture v1's end-to-end journey timings and any existing funnel/analytics numbers as PROVE's bar.
+
+A **`NEW-JOURNEY`** has no v1 flow to count; its baseline is **today's workaround** — the CLI invocation, raw API call, or manual procedure users perform without the UI — counted or derived like any other path. No workaround exists → the intrinsic floor stands as the bar, and any completable flow near it wins.
 
 **Exit:** the tuples every candidate must beat are recorded. No candidate flow is specced before its baseline exists.
 
@@ -285,7 +292,7 @@ Drive the real, built v2 end to end via the walkthrough vehicle and **re-count e
 
 ### PARITY (one gap-hunter pass — an agent at every level above `inline` — can force a new pipeline iteration)
 
-The gap-hunter (one blind agent; at `inline`, the main thread, recorded `NOT-BLIND`) receives v1, v2, the journey map, the capability map, the `DROPS:` list, and the SUSPECT adjudication record — not the rewrite thread's reasoning. Mandate: find capabilities reachable in v1 whose **intent** is unreachable in v2, and triage severity itself:
+The gap-hunter (one blind agent; at `inline`, the main thread, recorded `NOT-BLIND`) receives v1, v2, the journey map, the **capability-surface map with its adjudications**, the `DROPS:` list, and the SUSPECT adjudication record — not the rewrite thread's reasoning. Dual mandate: find capabilities reachable in v1 whose **intent** is unreachable in v2, **and sweep the capability surface for coverage** — an `UNSERVED` capability adjudicated `NEW-JOURNEY` that still has no working v2 journey is a gap; one adjudicated `OUT-OF-SCOPE` is not. Triage severity itself:
 
 - **Design-defining** — a task, mode, or capability users rely on; losing it forces workarounds or exodus. Only these come back as `PARITY-CLAIM`s.
 - **Small** — incidental layout details, cosmetic differences, one-extra-click reachability. Returned as `SMALL-DIFF` notes: recorded, never actioned.
@@ -307,6 +314,7 @@ From the status table, cumulative:
 - **Refuted / lost / reverted** — one line each ("23 flow ideas, 7 adopted, here's why the rest died").
 - **SUSPECT adjudications** — every accidental friction removed, every dark pattern decision, every load-bearing quirk preserved and why.
 - **Dropped capabilities** — every `DROPPED-BY-DESIGN` with its rationale; gaps confirmed, re-entered, and covered.
+- **Capability coverage** — the full surface map: every capability `COVERED` (by which journey), `NEW-JOURNEY` built, or `OUT-OF-SCOPE` with its rationale.
 - **Verification ledger** — per journey: which adversaries ran (and at what level), claims vs actioned, every `NOT-BLIND` judgment.
 - **Walkthrough vehicle** and exact steps to re-drive and re-count any journey.
 
