@@ -10,6 +10,7 @@ Generated (DO NOT hand-edit):
   - .claude-plugin/marketplace.json     Claude Code marketplace registry
   - .codex-plugin/plugin.json           Codex CLI plugin manifest
   - .agents/plugins/marketplace.json    Codex CLI marketplace registry
+  - plugins/<name>/                     Codex marketplace plugin bundle
   - SKILLS table inside README.md / AGENTS.md / CLAUDE.md (between markers)
 
 Usage:
@@ -68,10 +69,9 @@ def dumps(obj):
 
 
 def build_artifacts(src, skills):
-    """Return {relative_path: content_string} for every generated file."""
+    """Return {relative_path: text_or_bytes} for every generated file."""
     keywords = src["keywords"]
     author_obj = src["owner"]
-    author_str = f'{author_obj["name"]} <{author_obj["email"]}>'
     short = src["description"].split(".")[0] + "."
 
     claude_plugin = {
@@ -102,23 +102,40 @@ def build_artifacts(src, skills):
         "name": src["name"],
         "version": src["version"],
         "description": src["description"],
-        "author": author_str,
+        "author": author_obj,
         "homepage": src["homepage"],
         "repository": src["repository"],
         "license": src["license"],
         "keywords": keywords,
-        "interface": {"displayName": src["name"], "shortDescription": short},
+        "interface": {
+            "displayName": src["name"],
+            "shortDescription": short,
+            "longDescription": src["description"],
+            "developerName": author_obj["name"],
+            "category": src["category"],
+            "capabilities": ["Agent Skills"],
+            "websiteURL": src["homepage"],
+            "defaultPrompt": [
+                f"Use {src['name']} to choose and run the right workflow for this task."
+            ],
+        },
         "skills": "./skills",
     }
     codex_marketplace = {
         "name": src["name"],
-        "interface": {"displayName": src["name"], "shortDescription": short},
+        "interface": {"displayName": src["name"]},
         "plugins": [
             {
                 "name": src["name"],
-                "source": {"source": "local", "path": "./"},
+                "source": {
+                    "source": "local",
+                    "path": f"./plugins/{src['name']}",
+                },
+                "policy": {
+                    "installation": "AVAILABLE",
+                    "authentication": "ON_INSTALL",
+                },
                 "category": src["category"],
-                "description": src["description"],
             }
         ],
     }
@@ -129,6 +146,17 @@ def build_artifacts(src, skills):
         ".codex-plugin/plugin.json": dumps(codex_plugin),
         ".agents/plugins/marketplace.json": dumps(codex_marketplace),
     }
+
+    # Codex marketplace entries must resolve to a real child directory; the
+    # marketplace root itself cannot be the plugin source. Mirror only the
+    # canonical SKILL.md files so root skills/ remains the authored source.
+    codex_bundle = Path("plugins") / src["name"]
+    artifacts[(codex_bundle / ".codex-plugin/plugin.json").as_posix()] = dumps(
+        codex_plugin
+    )
+    for skill_md in sorted(ROOT.glob("skills/*/SKILL.md")):
+        bundled_skill = codex_bundle / skill_md.relative_to(ROOT)
+        artifacts[bundled_skill.as_posix()] = skill_md.read_bytes()
 
     catalog = skills_table(skills)
     for doc in ("README.md", "AGENTS.md"):
@@ -173,15 +201,52 @@ def main():
     artifacts = build_artifacts(src, skills)
 
     stale = []
+    # plugins/ is wholly generated. Detect and remove anything no longer
+    # produced so deleted skills or a plugin rename cannot leave ghost skills
+    # in the installable Codex bundle.
+    plugins_root = ROOT / "plugins"
+    expected_plugin_files = {
+        ROOT / rel
+        for rel in artifacts
+        if Path(rel).parts and Path(rel).parts[0] == "plugins"
+    }
+    if plugins_root.exists():
+        unexpected_plugin_files = sorted(
+            path
+            for path in plugins_root.rglob("*")
+            if path.is_file() and path not in expected_plugin_files
+        )
+        for path in unexpected_plugin_files:
+            stale.append(f"{path.relative_to(ROOT).as_posix()} (unexpected)")
+            if not check:
+                path.unlink()
+        if not check:
+            directories = sorted(
+                (path for path in plugins_root.rglob("*") if path.is_dir()),
+                key=lambda path: len(path.parts),
+                reverse=True,
+            )
+            for directory in directories:
+                if not any(directory.iterdir()):
+                    directory.rmdir()
+
     for rel, content in artifacts.items():
         path = ROOT / rel
-        current = path.read_text(encoding="utf-8") if path.exists() else None
-        if current == content:
+        exact_bytes = isinstance(content, bytes) or rel in {"AGENTS.md", "CLAUDE.md"}
+        expected = content if isinstance(content, bytes) else content.encode("utf-8")
+        current = path.read_bytes() if exact_bytes and path.exists() else None
+        if not exact_bytes and path.exists():
+            current = path.read_text(encoding="utf-8")
+        comparison = expected if exact_bytes else content
+        if current == comparison:
             continue
         stale.append(rel)
         if not check:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8")
+            if exact_bytes:
+                path.write_bytes(expected)
+            else:
+                path.write_text(content, encoding="utf-8")
 
     # Enforce AGENTS.md and CLAUDE.md are byte-identical on disk.
     agents_md, claude_md = ROOT / "AGENTS.md", ROOT / "CLAUDE.md"

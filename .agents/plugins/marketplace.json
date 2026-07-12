@@ -1,18 +1,20 @@
 {
   "name": "yd-skillset",
   "interface": {
-    "displayName": "yd-skillset",
-    "shortDescription": "Personal agent-skill set for AI coding chats."
+    "displayName": "yd-skillset"
   },
   "plugins": [
     {
       "name": "yd-skillset",
       "source": {
         "source": "local",
-        "path": "./"
+        "path": "./plugins/yd-skillset"
       },
-      "category": "agents",
-      "description": "Personal agent-skill set for AI coding chats. Installs into both Claude Code and Codex CLI from one repo; add skills under skills/<name>/SKILL.md and run scripts/generate.py."
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "agents"
     }
   ]
 }
