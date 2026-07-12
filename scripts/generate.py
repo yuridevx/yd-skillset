@@ -148,15 +148,28 @@ def build_artifacts(src, skills):
     }
 
     # Codex marketplace entries must resolve to a real child directory; the
-    # marketplace root itself cannot be the plugin source. Mirror only the
-    # canonical SKILL.md files so root skills/ remains the authored source.
+    # marketplace root itself cannot be the plugin source. Mirror each complete
+    # canonical skill tree so references/scripts travel with SKILL.md. Root
+    # skills/ remains the only authored source.
     codex_bundle = Path("plugins") / src["name"]
     artifacts[(codex_bundle / ".codex-plugin/plugin.json").as_posix()] = dumps(
         codex_plugin
     )
-    for skill_md in sorted(ROOT.glob("skills/*/SKILL.md")):
-        bundled_skill = codex_bundle / skill_md.relative_to(ROOT)
-        artifacts[bundled_skill.as_posix()] = skill_md.read_bytes()
+    skill_dirs = sorted(
+        path
+        for path in (ROOT / "skills").iterdir()
+        if path.is_dir() and (path / "SKILL.md").is_file()
+    )
+    for skill_dir in skill_dirs:
+        for skill_file in sorted(
+            path
+            for path in skill_dir.rglob("*")
+            if path.is_file()
+            and "__pycache__" not in path.parts
+            and path.suffix != ".pyc"
+        ):
+            bundled_skill = codex_bundle / skill_file.relative_to(ROOT)
+            artifacts[bundled_skill.as_posix()] = skill_file.read_bytes()
 
     catalog = skills_table(skills)
     for doc in ("README.md", "AGENTS.md"):
